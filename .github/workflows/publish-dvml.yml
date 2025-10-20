@@ -1,0 +1,48 @@
+name: Publish WK07 to DVML
+
+on:
+  push:
+    tags:
+      - "pre-class"
+
+env:
+  REPO: WK07
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v3
+      with:
+        path: '${{ env.REPO }}'
+
+    - name: Checkout DVML
+      uses: actions/checkout@v3
+      with:
+        repository: visualizedata/ml-fa25
+        path: dvml
+        token: ${{ secrets.DV_PUSH_TOKEN }} 
+
+
+    - name: Copy files
+      run: |
+        cd dvml
+        git rm -rf ${{ env.REPO }}
+        mkdir ${{ env.REPO }}
+        cp -r ../${{ env.REPO }}/.devcontainer ../${{ env.REPO }}/imgs ./${{ env.REPO }}/
+        cp ../${{ env.REPO }}/.gitignore ../${{ env.REPO }}/README.md ./${{ env.REPO }}/
+        cp ../${{ env.REPO }}/${{ env.REPO }}.ipynb ./${{ env.REPO }}/
+        cd ..
+
+    - name: Push
+      run: |
+        cd dvml
+        GITHUB_SHA_SHORT=$(echo $GITHUB_SHA | cut -c 1-8)
+        git config --local user.name "github-actions[bot]"
+        git config --local user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        COMMIT_MSG=${{ env.REPO }}-${{ github.ref_name }}-$(git log --format=%h -1)
+        git add -f ${{ env.REPO }}
+        git commit -m $COMMIT_MSG
+        git push -f origin main
